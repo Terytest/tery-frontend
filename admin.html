@@ -1,49 +1,80 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tery | Admin</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tery | Admin Command Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-black text-white p-10">
-    <h1 class="text-red-600 font-bold text-2xl mb-10 text-center uppercase tracking-widest">Tery Command Center</h1>
-    <div class="max-w-md mx-auto bg-gray-900 p-8 rounded-xl border border-red-900">
-        <label class="block text-xs mb-2 text-gray-500">USER ID</label>
-        <input type="text" id="target_id" class="w-full bg-black border border-gray-800 p-3 mb-6 rounded text-sm">
-        
-        <label class="block text-xs mb-2 text-gray-500">SELECT PLAN</label>
-        <select id="plan" class="w-full bg-black border border-gray-800 p-3 mb-8 rounded">
-            <option value="1_dollar">$1 (3 Months / 10-Day Restart)</option>
-            <option value="5_dollar">$5 (6 Months / 90-Day Restart)</option>
-            <option value="20_dollar">$20 (1 Year / Pro)</option>
-        </select>
-        
-        <button onclick="upgrade()" class="w-full bg-red-600 py-3 font-bold rounded">EXECUTE UPGRADE</button>
+<body class="bg-black text-gray-200 font-sans antialiased p-6 md:p-12">
+
+    <div class="max-w-xl mx-auto">
+        <h1 class="text-3xl font-bold text-red-600 mb-2 uppercase tracking-widest text-center">🛡️ Command Center</h1>
+        <p class="text-center text-gray-500 mb-10 text-sm">Manage users and subscriptions securely.</p>
+
+        <div class="bg-gray-900 border border-red-900/50 rounded-xl p-8 shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-600 to-red-900"></div>
+
+            <div class="space-y-6">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">1. Paste Unique ID</label>
+                    <input type="text" id="target_id" placeholder="user_1234..." class="w-full bg-black border border-gray-700 rounded-lg px-4 py-3 text-white font-mono text-sm focus:border-red-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">2. Select New Plan</label>
+                    <select id="plan" class="w-full bg-black border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-red-500 focus:outline-none appearance-none">
+                        <option value="free">Free (24 Hours Restart)</option>
+                        <option value="1_dollar">$1 Plan (3 Months | 10-Day Restart)</option>
+                        <option value="5_dollar">$5 Plan (6 Months | 90-Day Restart)</option>
+                        <option value="20_dollar">$20 PRO (1 Year | Never Restarts)</option>
+                    </select>
+                </div>
+
+                <button onclick="upgradeUser()" class="w-full bg-red-700 hover:bg-red-600 text-white font-bold py-4 rounded-lg shadow-lg transition duration-300 uppercase tracking-widest text-sm mt-4">
+                    Execute Upgrade
+                </button>
+            </div>
+        </div>
     </div>
 
     <script>
-        const supabaseClient = supabase.createClient('YOUR_SUPABASE_URL', 'YOUR_ANON_KEY');
+        const supabaseClient = supabase.createClient('https://nxhejhicpoztowqfdpkm.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54aGVqaGljcG96dG93cWZkcGttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxOTc0MDEsImV4cCI6MjA5MDc3MzQwMX0.rcuC47r-boezsmQUzaARCT5HPPgg-Ghjo4BXEAnVdNo');
 
-        async function upgrade() {
-            const id = document.getElementById('target_id').value;
-            const p = document.getElementById('plan').value;
-            
-            let days = 10, months = 3;
-            if(p === '5_dollar') { days = 90; months = 6; }
-            if(p === '20_dollar') { days = 365; months = 12; }
+        async function upgradeUser() {
+            const targetId = document.getElementById('target_id').value;
+            const plan = document.getElementById('plan').value;
 
-            const exp = new Date(); exp.setMonth(exp.getMonth() + months);
-            const rst = new Date(); rst.setDate(rst.getDate() + days);
+            if(!targetId) return alert("⚠️ Please paste a User ID.");
 
-            await supabaseClient.from('subscriptions').update({ 
-                plan_type: p, plan_expires_at: exp.toISOString(), next_restart_required_at: rst.toISOString() 
-            }).eq('user_id', id);
+            let daysToNextRestart = 1; 
+            let planMonths = 0; 
 
-            alert("Plan upgraded successfully!");
+            if (plan === '1_dollar') { daysToNextRestart = 10; planMonths = 3; }
+            if (plan === '5_dollar') { daysToNextRestart = 90; planMonths = 6; }
+            if (plan === '20_dollar') { daysToNextRestart = 365; planMonths = 12; }
+
+            const expiryDate = new Date();
+            expiryDate.setMonth(expiryDate.getMonth() + planMonths);
+
+            const nextRestart = new Date();
+            nextRestart.setDate(nextRestart.getDate() + daysToNextRestart);
+
+            const { error } = await supabaseClient.from('subscriptions').update({ 
+                plan_type: plan,
+                plan_expires_at: expiryDate.toISOString(),
+                next_restart_required_at: nextRestart.toISOString()
+            }).eq('user_id', targetId);
+
+            if (error) {
+                alert("Failed: " + error.message);
+            } else {
+                alert(`🔥 SUCCESS! User upgraded to ${plan.replace('_', ' ')}.`);
+                document.getElementById('target_id').value = "";
+            }
         }
     </script>
 </body>
 </html>
-
 
