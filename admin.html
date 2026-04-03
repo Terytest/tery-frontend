@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tery | Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-black text-white p-10">
+    <h1 class="text-red-600 font-bold text-2xl mb-10 text-center uppercase tracking-widest">Tery Command Center</h1>
+    <div class="max-w-md mx-auto bg-gray-900 p-8 rounded-xl border border-red-900">
+        <label class="block text-xs mb-2 text-gray-500">USER ID</label>
+        <input type="text" id="target_id" class="w-full bg-black border border-gray-800 p-3 mb-6 rounded text-sm">
+        
+        <label class="block text-xs mb-2 text-gray-500">SELECT PLAN</label>
+        <select id="plan" class="w-full bg-black border border-gray-800 p-3 mb-8 rounded">
+            <option value="1_dollar">$1 (3 Months / 10-Day Restart)</option>
+            <option value="5_dollar">$5 (6 Months / 90-Day Restart)</option>
+            <option value="20_dollar">$20 (1 Year / Pro)</option>
+        </select>
+        
+        <button onclick="upgrade()" class="w-full bg-red-600 py-3 font-bold rounded">EXECUTE UPGRADE</button>
+    </div>
+
+    <script>
+        const supabaseClient = supabase.createClient('YOUR_SUPABASE_URL', 'YOUR_ANON_KEY');
+
+        async function upgrade() {
+            const id = document.getElementById('target_id').value;
+            const p = document.getElementById('plan').value;
+            
+            let days = 10, months = 3;
+            if(p === '5_dollar') { days = 90; months = 6; }
+            if(p === '20_dollar') { days = 365; months = 12; }
+
+            const exp = new Date(); exp.setMonth(exp.getMonth() + months);
+            const rst = new Date(); rst.setDate(rst.getDate() + days);
+
+            await supabaseClient.from('subscriptions').update({ 
+                plan_type: p, plan_expires_at: exp.toISOString(), next_restart_required_at: rst.toISOString() 
+            }).eq('user_id', id);
+
+            alert("Plan upgraded successfully!");
+        }
+    </script>
+</body>
+</html>
+
+
